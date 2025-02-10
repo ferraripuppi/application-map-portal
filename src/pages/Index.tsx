@@ -1,17 +1,41 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ApplicationsGrid } from "@/components/applications-grid";
 import { ApplicationDetail } from "@/components/application-detail";
-import { mockApplications, mockUsers } from "@/data/mock";
+import { mockUsers } from "@/data/mock";
 import { Application } from "@/types";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { fetchPlanningApplications } from "@/services/planningApi";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function Index() {
   const [selectedApplication, setSelectedApplication] = useState<Application | null>(
     null
   );
-  const [applications, setApplications] = useState(mockApplications);
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const loadApplications = async () => {
+      try {
+        const data = await fetchPlanningApplications();
+        setApplications(data);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to load planning applications. Please try again later.",
+          variant: "destructive",
+        });
+        console.error('Failed to fetch planning applications:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadApplications();
+  }, []);
 
   const handleAssign = (userId: string) => {
     const assignedUser = mockUsers.find((user) => user.id === userId);
@@ -45,10 +69,17 @@ export default function Index() {
           />
         </div>
 
-        <ApplicationsGrid
-          applications={applications}
-          onApplicationClick={setSelectedApplication}
-        />
+        {isLoading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full mx-auto"></div>
+            <p className="mt-4 text-muted-foreground">Loading planning applications...</p>
+          </div>
+        ) : (
+          <ApplicationsGrid
+            applications={applications}
+            onApplicationClick={setSelectedApplication}
+          />
+        )}
 
         {selectedApplication && (
           <ApplicationDetail
